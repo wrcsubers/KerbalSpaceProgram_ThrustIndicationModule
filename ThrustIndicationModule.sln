@@ -155,7 +155,7 @@ Global
 		$0.VersionControlPolicy = $27
 		$27.inheritsSet = Mono
 		description = A quick and compact indicator to monitor current thrust output of active engines! - A mod for KSP by Squad
-		version = 1.0
+		version = 1.1
 		outputpath = ..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\Kerbal Space Program\GameData\ThrustIndicationModule
 	EndGlobalSection
 EndGlobal

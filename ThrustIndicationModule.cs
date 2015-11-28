@@ -24,7 +24,7 @@
 // SOFTWARE.
 // 
 //=====================================================================================
-//
+//Version 1.1 - Unreleased
 //Version 1.0 - Initial Release 11.26.15
 //
 using System;
@@ -32,6 +32,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
+using System.IO;
 
 namespace TIM
 {
@@ -41,34 +42,53 @@ namespace TIM
 		//============================================================================================================================================
 		//Define Variables
 		//============================================================================================================================================
+		private ConfigNode ThrustIndicationModule_SystemSettings;
+
 		private List <Part> ActiveEngines = new List<Part> ();
 		private int PartCount = 0;
-		private Gauge TIMGauge;
 		private float TotalCapableThrust;
 		private float TotalCurrentThrust;
 		private float ThrustPercentage;
 
+		private bool UseSplitNeedle;
+		private Gauge TIMGauge;
+		private Color TIMGaugeColor = new Color(0.5f,0.5f,0.5f,1.0f);
+		private Texture2D TIMGaugeTexture = new Texture2D (27, 15, TextureFormat.ARGB32, false);
+
+		private Gauge StockGauge;
+		private Color StockGaugeColor = new Color(1.0f,1.0f,1.0f,1.0f);
+		private Texture2D StockGaugeTexture = new Texture2D (27, 15, TextureFormat.ARGB32, false);
+		private float StockGaugeColorAlpha;
+
 		//============================================================================================================================================
 		//Start Running Processes
 		//============================================================================================================================================
-		//This function gets called only once, during the KSP loading screen.
-		private void Awake ()
-		{
-
-		}
 
 		//Called when the flight starts or in the editor. OnStart will be called before OnUpdate or OnFixedUpdate are ever called.
+		//============================================================================================================================================
 		private void Start ()
 		{
+			//Load settings from external file
+			ThrustIndicationModule_SystemSettings = new ConfigNode ();
+			ThrustIndicationModule_SystemSettings = ConfigNode.Load ("GameData/ThrustIndicationModule/Config/ThrustIndicationModule_PluginSettings.cfg");
+			if (ThrustIndicationModule_SystemSettings != null) {
+				print ("THRUSTINDICATIONMODULE - Settings Exist! Loading Values...");
+				UseSplitNeedle = Boolean.Parse (ThrustIndicationModule_SystemSettings.GetValue ("UseSplitNeedle"));
+				StockGaugeColorAlpha = float.Parse (ThrustIndicationModule_SystemSettings.GetValue ("StockGaugeColorAlpha"));
+			} else {
+				print ("THRUSTINDICATIONMODULE - Settings Missing! Loading Defaults...");
+				UseSplitNeedle = false;
+				StockGaugeColorAlpha = 0.6f;
+			}
 			//Thanks to KSP Forum Member xEvilReeperx for helping with this...
 			var SourceObject = FlightUIController.fetch.thr.gameObject;
 			var ClonedObject = UnityEngine.Object.Instantiate (SourceObject, SourceObject.transform.position, SourceObject.transform.rotation) as GameObject;
 			TIMGauge = ClonedObject.GetComponent<Gauge> ();
-			//Set the TIMGauge to a different color... Color.gray is default
-			TIMGauge.transform.GetChild (0).renderer.material.color = Color.gray;
+			StockGauge = SourceObject.GetComponent<Gauge> ();
 
 			ClonedObject.transform.parent = SourceObject.transform.parent;
 
+			//Cloned settings from stock gauge just to make sure everything is correct
 			TIMGauge.minRot = FlightUIController.fetch.thr.minRot;
 			TIMGauge.maxRot = FlightUIController.fetch.thr.maxRot;
 			TIMGauge.minValue = FlightUIController.fetch.thr.minValue;
@@ -76,6 +96,20 @@ namespace TIM
 			TIMGauge.responsiveness = FlightUIController.fetch.thr.responsiveness;
 			TIMGauge.setValue (0f);
 			TIMGauge.enabled = true;
+
+			if (UseSplitNeedle == true) {
+				//Load different Textures for needles
+				TIMGaugeTexture = GameDatabase.Instance.GetTexture ("ThrustIndicationModule/Textures/GaugeBottom", false);
+				StockGaugeTexture = GameDatabase.Instance.GetTexture ("ThrustIndicationModule/Textures/GaugeTop", false);
+				TIMGauge.transform.GetChild (0).renderer.material.SetTexture (0, TIMGaugeTexture);
+				StockGauge.transform.GetChild (0).renderer.material.SetTexture (0, StockGaugeTexture);
+			} else {
+				//Use stock texture for both needles
+				//TIMGaugeTexture = FlightUIController.fetch.thr.renderer.material.GetTexture (0) as Texture2D;
+				//StockGaugeTexture = FlightUIController.fetch.thr.renderer.material.GetTexture (0) as Texture2D;
+			}
+			//Set Textures for each needle
+
 		}
 
 		//This method runs every physics frame
@@ -143,6 +177,20 @@ namespace TIM
 			}
 			//Not truly a percentage, gauge works between 0 and 1, NOT 0 and 100
 			ThrustPercentage = ((TotalCurrentThrust / TotalCapableThrust));
+
+			if (UseSplitNeedle == false) {
+				//Gently Fade the alpha channel of the stock gauge so we can see TIM if it is near/behind
+				if (FlightUIController.fetch.thr.rawValue >= ThrustPercentage) {
+					StockGaugeColor.a = Mathf.Max (Mathf.Min (((((FlightUIController.fetch.thr.rawValue - ThrustPercentage) - 0.015f) * 2.3f) + StockGaugeColorAlpha), 1.0f), StockGaugeColorAlpha);
+				}
+				if (FlightUIController.fetch.thr.rawValue <= ThrustPercentage) {
+					StockGaugeColor.a = Mathf.Max (Mathf.Min (((((FlightUIController.fetch.thr.rawValue - ThrustPercentage) + 0.015f) * -2.3f) + StockGaugeColorAlpha), 1.0f), StockGaugeColorAlpha);
+				}
+				StockGauge.transform.GetChild (0).renderer.material.color = StockGaugeColor;
+				TIMGauge.transform.GetChild (0).renderer.material.color = TIMGaugeColor;
+				//Render the StockGauge after TIM so that it shows in front of TIM
+				StockGauge.transform.GetChild (0).renderer.material.renderQueue = TIMGauge.transform.GetChild (0).renderer.material.renderQueue + 1;
+			}
 			//Set Gauge to Calculated Value
 			TIMGauge.setValue (ThrustPercentage);
 			//Reset Thrust Values Each Compute Cycle
