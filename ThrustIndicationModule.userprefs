@@ -3,7 +3,7 @@
   <MonoDevelop.Ide.Workspace ActiveConfiguration="Release" />
   <MonoDevelop.Ide.Workbench ActiveDocument="ThrustIndicationModule.cs">
     <Files>
-      <File FileName="ThrustIndicationModule.cs" Line="27" Column="27" />
+      <File FileName="ThrustIndicationModule.cs" Line="27" Column="33" />
     </Files>
   </MonoDevelop.Ide.Workbench>
   <MonoDevelop.Ide.DebuggingService.Breakpoints>

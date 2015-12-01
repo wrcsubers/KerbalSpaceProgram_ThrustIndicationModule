@@ -24,7 +24,7 @@
 // SOFTWARE.
 // 
 //=====================================================================================
-//Version 1.1 - Unreleased
+//Version 1.1 - Released 12.1.15
 //Version 1.0 - Initial Release 11.26.15
 //
 using System;
@@ -46,6 +46,8 @@ namespace TIM
 
 		private List <Part> ActiveEngines = new List<Part> ();
 		private int PartCount = 0;
+		private float CurrentMach;
+		private float CurrentAtm;
 		private float TotalCapableThrust;
 		private float TotalCurrentThrust;
 		private float ThrustPercentage;
@@ -105,11 +107,7 @@ namespace TIM
 				StockGauge.transform.GetChild (0).renderer.material.SetTexture (0, StockGaugeTexture);
 			} else {
 				//Use stock texture for both needles
-				//TIMGaugeTexture = FlightUIController.fetch.thr.renderer.material.GetTexture (0) as Texture2D;
-				//StockGaugeTexture = FlightUIController.fetch.thr.renderer.material.GetTexture (0) as Texture2D;
 			}
-			//Set Textures for each needle
-
 		}
 
 		//This method runs every physics frame
@@ -128,6 +126,11 @@ namespace TIM
 				//Set Part count to current count
 				PartCount = FlightGlobals.ActiveVessel.parts.Count ();
 			}
+
+			//Find Global Variables
+			CurrentMach = Convert.ToSingle(FlightGlobals.ActiveVessel.mach);
+			CurrentAtm = Convert.ToSingle (FlightGlobals.ActiveVessel.atmDensity);
+
 			//Perform calculations for each engine
 			foreach (Part SingleEngine in ActiveEngines) {
 				//ModuleEngines
@@ -139,14 +142,36 @@ namespace TIM
 					ME2 = SingleEngine.FindModulesImplementing<ModuleEngines> ().Last ();
 					//Do Calculations for Module 1 if it is operational
 					if (ME1.isOperational == true) {
-						TotalCapableThrust = TotalCapableThrust + (ME1.GetMaxThrust () * (ME1.thrustPercentage / 100));
-						TotalCurrentThrust = TotalCurrentThrust + ME1.GetCurrentThrust ();
+						//Jet engines use Atmosphere & Velocity Curves to modify performance at different altitudes/speeds.  Use these calculations for those engines, otherwise use base values from part cfg.
+						if (ME1.useAtmCurve == true && ME1.useVelCurve == true) {
+							//If the Thrust Multiplier from VelCurve * AtmCurve is more than 1, evaluate the curves and determine max thrust for that scenario.  Otherwise, use the base method and assume Max Thrust from cfg file.
+							if ((ME1.velCurve.Evaluate (CurrentMach) * ME1.atmCurve.Evaluate (CurrentAtm)) > 1) {
+								TotalCapableThrust = TotalCapableThrust + ((ME1.GetMaxThrust () * (ME1.thrustPercentage / 100)) * (ME1.velCurve.Evaluate (CurrentMach)) * (ME1.atmCurve.Evaluate (CurrentAtm)));
+							} else {
+								TotalCapableThrust = TotalCapableThrust + ((ME1.GetMaxThrust () * (ME1.thrustPercentage / 100)));
+							}
+							TotalCurrentThrust = TotalCurrentThrust + ME1.GetCurrentThrust ();
+						} else {
+							TotalCapableThrust = TotalCapableThrust + (ME1.GetMaxThrust () * (ME1.thrustPercentage / 100));
+							TotalCurrentThrust = TotalCurrentThrust + ME1.GetCurrentThrust ();
+						}
 					}
 					//If Module 2 is different from 1 (by engineID) do calculations for Module 2 if it is operational
 					if (ME1.engineID != ME2.engineID) {
 						if (ME2.isOperational == true) {
-							TotalCapableThrust = TotalCapableThrust + (ME2.GetMaxThrust () * (ME2.thrustPercentage / 100));
-							TotalCurrentThrust = TotalCurrentThrust + ME2.GetCurrentThrust ();
+							//Jet engines use Atmosphere & Velocity Curves to modify performance at different altitudes/speeds.  Use these calculations for those engines, otherwise use base values from part cfg.
+							if (ME2.useAtmCurve == true && ME2.useVelCurve == true) {
+								//If the Thrust Multiplier from VelCurve * AtmCurve is more than 1, evaluate the curves and determine max thrust for that scenario.  Otherwise, use the base method and assume Max Thrust from cfg file.
+								if ((ME2.velCurve.Evaluate (CurrentMach) * ME2.atmCurve.Evaluate (CurrentAtm)) > 1) {
+									TotalCapableThrust = TotalCapableThrust + ((ME2.GetMaxThrust () * (ME2.thrustPercentage / 100)) * (ME2.velCurve.Evaluate (CurrentMach)) * (ME2.atmCurve.Evaluate (CurrentAtm)));
+								} else {
+									TotalCapableThrust = TotalCapableThrust + ((ME2.GetMaxThrust () * (ME2.thrustPercentage / 100)));
+								}
+								TotalCurrentThrust = TotalCurrentThrust + ME2.GetCurrentThrust ();
+							} else {
+								TotalCapableThrust = TotalCapableThrust + (ME2.GetMaxThrust () * (ME2.thrustPercentage / 100));
+								TotalCurrentThrust = TotalCurrentThrust + ME2.GetCurrentThrust ();
+							}
 						}
 					}
 				}
@@ -159,14 +184,36 @@ namespace TIM
 					MEFX2 = SingleEngine.FindModulesImplementing<ModuleEnginesFX> ().Last ();
 					//Do Calculations for Module 1 if it is operational
 					if (MEFX1.isOperational == true) {
-						TotalCapableThrust = TotalCapableThrust + (MEFX1.GetMaxThrust () * (MEFX1.thrustPercentage / 100));
-						TotalCurrentThrust = TotalCurrentThrust + MEFX1.GetCurrentThrust ();
+						//Jet engines use Atmosphere & Velocity Curves to modify performance at different altitudes/speeds.  Use these calculations for those engines, otherwise use base values from part cfg.
+						if (MEFX1.useAtmCurve == true && MEFX1.useVelCurve == true) {
+							//If the Thrust Multiplier from VelCurve * AtmCurve is more than 1, evaluate the curves and determine max thrust for that scenario.  Otherwise, use the base method and assume Max Thrust from cfg file.
+							if ((MEFX1.velCurve.Evaluate (CurrentMach) * MEFX1.atmCurve.Evaluate (CurrentAtm)) > 1) {
+								TotalCapableThrust = TotalCapableThrust + ((MEFX1.GetMaxThrust () * (MEFX1.thrustPercentage / 100)) * (MEFX1.velCurve.Evaluate (CurrentMach)) * (MEFX1.atmCurve.Evaluate (CurrentAtm)));
+							} else {
+								TotalCapableThrust = TotalCapableThrust + ((MEFX1.GetMaxThrust () * (MEFX1.thrustPercentage / 100)));
+							}
+							TotalCurrentThrust = TotalCurrentThrust + MEFX1.GetCurrentThrust ();
+						} else {
+							TotalCapableThrust = TotalCapableThrust + (MEFX1.GetMaxThrust () * (MEFX1.thrustPercentage / 100));
+							TotalCurrentThrust = TotalCurrentThrust + MEFX1.GetCurrentThrust ();
+						}
 					}
 					//If Module 2 is different from 1 (by engineID) do calculations for Module 2 if it is operational
 					if (MEFX1.engineID != MEFX2.engineID) {
 						if (MEFX2.isOperational == true) {
-							TotalCapableThrust = TotalCapableThrust + (MEFX2.GetMaxThrust () * (MEFX2.thrustPercentage / 100));
-							TotalCurrentThrust = TotalCurrentThrust + MEFX2.GetCurrentThrust ();
+							//Jet engines use Atmosphere & Velocity Curves to modify performance at different altitudes/speeds.  Use these calculations for those engines, otherwise use base values from part cfg.
+							if (MEFX2.useAtmCurve == true && MEFX2.useVelCurve == true) {
+								//If the Thrust Multiplier from VelCurve * AtmCurve is more than 1, evaluate the curves and determine max thrust for that scenario.  Otherwise, use the base method and assume Max Thrust from cfg file.
+								if ((MEFX2.velCurve.Evaluate (CurrentMach) * MEFX2.atmCurve.Evaluate (CurrentAtm)) > 1) {
+									TotalCapableThrust = TotalCapableThrust + ((MEFX2.GetMaxThrust () * (MEFX2.thrustPercentage / 100)) * (MEFX2.velCurve.Evaluate (CurrentMach)) * (MEFX2.atmCurve.Evaluate (CurrentAtm)));
+								} else {
+									TotalCapableThrust = TotalCapableThrust + ((MEFX2.GetMaxThrust () * (MEFX2.thrustPercentage / 100)));
+								}
+								TotalCurrentThrust = TotalCurrentThrust + MEFX2.GetCurrentThrust ();
+							} else {
+								TotalCapableThrust = TotalCapableThrust + (MEFX2.GetMaxThrust () * (MEFX2.thrustPercentage / 100));
+								TotalCurrentThrust = TotalCurrentThrust + MEFX2.GetCurrentThrust ();
+							}
 						}
 					}
 				}
