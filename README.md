@@ -1,3 +1,5 @@
+__---This project is no longer in development and is provided for archive purposes only---__
+
 # T.I.M - Thrust Indication Module: A mod for Kerbal Space Program
 
 T.I.M allows you to easily visualize your current thrust output and efficiency using the stock GUI. T.I.M. displays a second needle in the throttle gauge next to the NavBall and shows you the current thrust output as a percentage of the engine(s) total capable thrust.  Very handy for Planes or anywhere you find an atmosphere.
