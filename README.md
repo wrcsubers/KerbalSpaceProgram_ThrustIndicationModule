@@ -2,7 +2,7 @@
 
 T.I.M allows you to easily visualize your current thrust output and efficiency using the stock GUI. T.I.M. displays a second needle in the throttle gauge next to the NavBall and shows you the current thrust output as a percentage of the engine(s) total capable thrust.  Very handy for Planes or anywhere you find an atmosphere.
 
-Features in v1.1
+### Features in v1.1
 
 * Shows current, combined Thrust Output of all active engines on vessel:
   * The gray needle in the throttle gauge shows the current percent thrust, just like the throttle percentage.
